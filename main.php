@@ -8,7 +8,8 @@ $garden->initialize();
 //Сбор урожая с сада
 $garden->collectHarvest();
 
-//var_dump($garden->harvest_arr);
+//Подсчёты урожая
+$garden->countHarverst();
 
 $garden->display();
 
