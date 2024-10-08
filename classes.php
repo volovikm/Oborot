@@ -110,7 +110,7 @@ class Garden
         }
 
         //Вывод веса самого тяжёлого яблока и id дерева
-        echo("<br><div>Вес самого тяжёлого яблока: ".$this->heavy_apple_data["weight"]."</div>");
+        echo("<br><div>Вес самого тяжёлого яблока: ".$this->heavy_apple_data["weight"]." г</div>");
         echo("<div>id дерева: ".$this->heavy_apple_data["tree_id"]."</div>");
     }
 }
