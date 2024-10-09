@@ -15,7 +15,7 @@ class Garden
 
     public function getGardenSetup() //Метод получения данных о саде из файла garden_setup.json
     {
-        $garden_setup=file_get_contents($_SERVER["DOCUMENT_ROOT"]."/Oborot/src/garden_setup.json");
+        $garden_setup=file_get_contents("garden_setup.json");
         $garden_setup=json_decode($garden_setup,true);
         $this->garden_setup=$garden_setup;
         return($this->garden_setup);
@@ -71,9 +71,6 @@ class Garden
 
         //Расчёт данных самого тяжёлого яблока
         $this->heavy_apple_data=$counter->getHeavyAppleData($this->harvest);
-
-        var_dump($this->heavy_apple_data);
-
     }
 
     public function display($console=true)//Метод вывода сада и результатов расчётов
