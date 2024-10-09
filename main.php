@@ -1,5 +1,5 @@
 <?php
-require_once($_SERVER['DOCUMENT_ROOT']."/Oborot/classes.php");
+require_once("classes.php");
 
 //Создание сада с деревьями, вывод массива деревьев
 $garden=new Garden();
