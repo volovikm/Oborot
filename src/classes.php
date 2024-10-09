@@ -15,17 +15,17 @@ class Garden
 
     public function getGardenSetup() //Метод получения данных о саде из файла garden_setup.json
     {
-        $garden_setup=file_get_contents("garden_setup.json");
+        $garden_setup=file_get_contents($_SERVER["DOCUMENT_ROOT"]."/Oborot/src/garden_setup.json");
         $garden_setup=json_decode($garden_setup,true);
         $this->garden_setup=$garden_setup;
+        return($this->garden_setup);
     }
 
-    public function initialize() //Метод создания деревьев в саду (внесение деревьев в массив)
+    public function initialize($garden_source) //Метод создания деревьев в саду (внесение деревьев в массив)
     {
         //Заполнение массива деревьями по условию
-        $this->getGardenSetup();
         $id=0;
-        foreach($this->garden_setup["trees"] as $type=>$tree)
+        foreach($garden_source["trees"] as $type=>$tree)
         {   
             for($i=0;$i<$tree["amount"];$i++)
             {
@@ -37,36 +37,43 @@ class Garden
                 array_push($this->trees,$tree_row);
             }
         }
+
+        return($this->trees);
     }
 
-    public function collectHarvest() //Метод сбора всех плодов в саду (внесение объёма плодов в массив)
+    public function collectHarvest($trees,$garden_source) //Метод сбора всех плодов в саду (внесение объёма плодов в массив)
     {
-        foreach($this->trees as $tree)
+        foreach($trees as $tree)
         {
             $tree_obj=new Tree;
             $tree_obj->id=$tree["id"];
             $tree_obj->type=$tree["type"];
-            $tree_obj->harvest_range=$this->garden_setup["trees"][$tree["type"]]["harvest_range"];
+            $tree_obj->harvest_range=$garden_source["trees"][$tree["type"]]["harvest_range"];
 
-            $tree_harvest=$tree_obj->collectTreeHarvest(); //Массив урожая с одного дерева
+            $tree_harvest=$tree_obj->collectTreeHarvest($garden_source); //Массив урожая с одного дерева
 
             //Заполнение массива урожая
             $this->harvest=array_merge_recursive($this->harvest,$tree_harvest);
         }
+
+        return($this->harvest);
     }
 
-    public function countHarverst() //Метод вызова расчётов плодов
+    public function countHarverst($garden_source) //Метод вызова расчётов плодов
     {
         $counter=new Counter;
 
         //Расчёт количества фруктов по типам
-        $this->harvest_amounts_by_types=$counter->countHarvestAmountByType($this->harvest);
+        $this->harvest_amounts_by_types=$counter->countHarvestAmountByType($this->garden_setup,$this->harvest);
 
         //Расчёт общего веса фруктов по типам
-        $this->harvest_weights_by_types=$counter->countHarvestWeightByType($this->harvest);
+        $this->harvest_weights_by_types=$counter->countHarvestWeightByType($this->garden_setup,$this->harvest);
 
         //Расчёт данных самого тяжёлого яблока
         $this->heavy_apple_data=$counter->getHeavyAppleData($this->harvest);
+
+        var_dump($this->heavy_apple_data);
+
     }
 
     public function display($console=true)//Метод вывода сада и результатов расчётов
@@ -146,7 +153,7 @@ class Garden
     }
 }
 
-class Tree extends Garden
+class Tree
 {
     public $id; 
     public $type; //Сорт дерева: apple | peach
@@ -160,10 +167,8 @@ class Tree extends Garden
         return($tree_row);
     }
 
-    public function collectTreeHarvest()//Метод сбора урожая с дерева
+    public function collectTreeHarvest($garden_source)//Метод сбора урожая с дерева (возвращает масив плодов с дерева)
     {
-        $this->getGardenSetup();
-
         $tree_harvest=[];
         $this->harvest_amount=rand($this->harvest_range["min"],$this->harvest_range["max"]);
 
@@ -172,7 +177,7 @@ class Tree extends Garden
             $fruit=new Fruit;
             $fruit->tree_id=$this->id;
             $fruit->tree_type=$this->type;
-            $fruit->weight_range=$this->garden_setup["trees"][$this->type]["harvest_weight_range"];
+            $fruit->weight_range=$garden_source["trees"][$this->type]["harvest_weight_range"];
 
             $fruit_row=$fruit->collectFruit();
             array_push($tree_harvest,$fruit_row);
@@ -200,71 +205,69 @@ class Fruit
     public function defineWeight()//Метод определения веса фрукта
     {
         $this->weight=rand($this->weight_range["min"],$this->weight_range["max"]);
+
+        return($this->weight);
     }
 
 }
 
-class Counter extends Garden //Класс для расчётов урожая в саду
+class Counter//Класс для расчётов урожая в саду
 {
-    public function countHarvestAmountByType($harvest)
+    public function countHarvestAmountByType($garden_source,$harvest)
     {
-        $this->getGardenSetup();
+        $harvest_amounts_by_types=[];
 
-        // массива по типам (для возможного добавления новых типов типов деревьев)
-        foreach($this->garden_setup["trees"] as $type=>$tree)
+        //Распределение по типам (для возможного добавления новых типов типов деревьев)
+        foreach($garden_source["trees"] as $type=>$tree)
         {
-            $this->harvest_amounts_by_types[$type]=0;
+            $harvest_amounts_by_types[$type]=0;
 
             foreach($harvest as $fruit)
             {
                 if($fruit["type"]==$type)
                 {
-                    $this->harvest_amounts_by_types[$type]++;
+                    $harvest_amounts_by_types[$type]++;
                 }
             }
         }
 
-        
-
-        return($this->harvest_amounts_by_types);
+        return($harvest_amounts_by_types);
     }
 
-    public function countHarvestWeightByType($harvest)
+    public function countHarvestWeightByType($garden_source,$harvest)
     {
-        $this->getGardenSetup();
+        $harvest_weights_by_types=[];
 
-        //Инициализация массива по типам (для возможного добавления новых типов типов деревьев)
-        foreach($this->garden_setup["trees"] as $type=>$tree)
+        //Распределение по типам (для возможного добавления новых типов типов деревьев)
+        foreach($garden_source["trees"] as $type=>$tree)
         {
-            $this->harvest_weights_by_types[$type]=0;
+            $harvest_weights_by_types[$type]=0;
 
             foreach($harvest as $fruit)
             {
                 if($fruit["type"]==$type)
                 {
-                    $this->harvest_weights_by_types[$type]=$this->harvest_weights_by_types[$type]+$fruit["weight"];
+                    $harvest_weights_by_types[$type]=$harvest_weights_by_types[$type]+$fruit["weight"];
                 }
             }
         }
 
-        
-
-        return($this->harvest_weights_by_types);
+        return($harvest_weights_by_types);
     }
 
     public function getHeavyAppleData($harvest)
     {
-        $this->heavy_apple_data["weight"]=0;
+        $heavy_apple_data["weight"]=0;
         foreach($harvest as $fruit)
         {
-            if($fruit["type"]=="apple" && $fruit["weight"]>$this->heavy_apple_data["weight"])
+            if($fruit["type"]=="apple" && $fruit["weight"]>$heavy_apple_data["weight"])
             {
-                $this->heavy_apple_data["weight"]=$fruit["weight"];
-                $this->heavy_apple_data["tree_id"]=$fruit["tree_id"];
+                $heavy_apple_data["weight"]=$fruit["weight"];
+                $heavy_apple_data["tree_id"]=$fruit["tree_id"];
             }
         }
 
-        return($this->heavy_apple_data);
+        return($heavy_apple_data);
     }
 
 }
